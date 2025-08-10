@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --sidebar-bg: #1e293b;
+            --main-bg: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-light: #f8fafc;
+            --text-muted: #64748b;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--main-bg); color: var(--text-dark); }
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: var(--text-light); padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 40px; }
+        .sidebar-header i { font-size: 2rem; color: var(--primary-color); }
+        .sidebar-header h1 { font-size: 1.5rem; }
+        .sidebar-nav a { display: flex; align-items: center; gap: 15px; padding: 12px 15px; text-decoration: none; color: #cbd5e1; border-radius: 8px; margin-bottom: 8px; transition: all 0.2s ease; }
+        .sidebar-nav a:hover { background-color: rgba(255,255,255,0.1); }
+        .sidebar-nav a.active { background-color: var(--primary-color); color: var(--text-light); font-weight: 600; }
+        .sidebar-nav a i { width: 20px; text-align: center; }
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .page-header { margin-bottom: 30px; }
+        .page-header h2 { font-size: 2.5rem; font-weight: 700; }
+        .page-header p { color: var(--text-muted); }
+        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .stat-card { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: var(--text-light); padding: 25px; border-radius: 12px; display: flex; align-items: center; gap: 20px; }
+        .stat-card.earnings-card { background: linear-gradient(135deg, var(--success-color), #16a34a); }
+        .stat-card-icon { font-size: 2.5rem; opacity: 0.8; }
+        .stat-card-info h3 { font-size: 2.5rem; font-weight: 700; }
+        .stat-card-info p { opacity: 0.9; }
+        .content-card { background-color: var(--card-bg); border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); margin-bottom: 30px;}
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-header h4 { font-size: 1.25rem; font-weight: 600; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn i { font-size: 1.1em; }
+        .btn-primary { background-color: var(--primary-color); color: var(--text-light); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-danger { background-color: var(--danger-color); color: var(--text-light); }
+        .btn-success { background-color: var(--success-color); color: var(--text-light); }
+        .btn-warning { background-color: var(--warning-color); color: var(--text-light); }
+        .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #f8fafc; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; }
+        td img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .action-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+        .status-badge { padding: 4px 12px; border-radius: 12px; font-weight: 500; font-size: 0.8rem; color: white; text-align: center;}
+        .status-pending { background-color: var(--warning-color); }
+        .status-banned, .status-rejected { background-color: var(--danger-color); }
+        .status-active, .status-enabled, .status-completed { background-color: var(--success-color); }
+        .filter-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;}
+        .filter-btn { background: none; border: none; padding: 8px 16px; font-size: 1rem; font-weight: 500; color: var(--text-muted); cursor: pointer; border-radius: 8px; border-bottom: 3px solid transparent;}
+        .filter-btn.active { color: var(--primary-color); font-weight: 600; border-bottom-color: var(--primary-color);}
+        .request-table-container { display: none; }
+        .request-table-container.active { display: block; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;}
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { font-size: 1.5rem; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; flex-direction: column; gap: 15px; justify-content: center; align-items: center; z-index: 9999; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .inline-button-group { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .inline-button-group input { flex-grow: 1; }
+        .info-box { background-color: #eef2ff; border-left: 4px solid var(--primary-color); padding: 15px; margin-top: 20px; border-radius: 8px; font-size: 0.9rem; color: #4338ca;}
+    </style>
+</head>
+<body>
+    <div id="loading-overlay" style="display: none;"><div class="loader"></div><p id="loader-text"></p></div>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-halved"></i>
+                <h1>Pro Admin</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" data-target="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+                <a href="#" class="nav-link" data-target="users"><i class="fas fa-users"></i><span>Users</span></a>
+                <a href="#" class="nav-link" data-target="messaging"><i class="fas fa-paper-plane"></i><span>Messaging</span></a>
+                <a href="#" class="nav-link" data-target="redeem-requests"><i class="fas fa-inbox"></i><span>Redeem Requests</span></a>
+                <a href="#" class="nav-link" data-target="ad-management"><i class="fas fa-ad"></i><span>Ad Management</span></a>
+                <a href="#" class="nav-link" data-target="redeem-categories"><i class="fas fa-tags"></i><span>Redeem Categories</span></a>
+                <a href="#" class="nav-link" data-target="redeem-items"><i class="fas fa-gem"></i><span>Redeem Items</span></a>
+                <a href="#" class="nav-link" data-target="reports"><i class="fas fa-file-alt"></i><span>Reports</span></a>
+                <a href="#" class="nav-link" data-target="settings"><i class="fas fa-cog"></i><span>Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section id="dashboard" class="page active">
+                 <div class="page-header"><h2>Dashboard</h2><p>Welcome back, Admin! Here’s a summary of your application.</p></div>
+                 <div class="dashboard-cards">
+                    <div class="stat-card"><i class="fas fa-users stat-card-icon"></i><div class="stat-card-info"><h3 id="total-users">0</h3><p>Total Users</p></div></div>
+                    <div class="stat-card"><i class="fas fa-star stat-card-icon"></i><div class="stat-card-info"><h3 id="total-points-all-users">0</h3><p>Total Points (All Users)</p></div></div>
+                    <div class="stat-card"><i class="fas fa-hourglass-half stat-card-icon"></i><div class="stat-card-info"><h3 id="pending-requests">0</h3><p>Pending Requests</p></div></div>
+                    <div class="stat-card earnings-card"><i class="fas fa-dollar-sign stat-card-icon"></i><div class="stat-card-info"><h3 id="total-admin-earnings">$0</h3><p>Total Admin Earnings</p></div></div>
+                </div>
+            </section>
+            
+            <section id="users" class="page"><div class="page-header"><h2>User Management</h2><p>View, ban, or delete users and send them messages.</p></div><div class="content-card"><div class="card-header"><h4>All Users</h4></div><table id="users-table"><thead><tr><th>User</th><th>Points</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div></section>
+            <section id="messaging" class="page"><div class="page-header"><h2>Messaging</h2><p>Communicate with your users via Telegram Bot.</p></div><div class="content-card"><div class="card-header"><h4>Broadcast Message</h4></div><p style="margin-bottom: 20px; color: var(--text-muted);">Send a message to all users of your application. Select a template below and click send.</p><div class="form-group"><label for="broadcast-template-select">Select Message Template</label><select id="broadcast-template-select"><option>Loading templates...</option></select></div><button class="btn btn-primary" id="broadcast-btn"><i class="fas fa-bullhorn"></i> Send to All Users</button></div><div class="content-card"><div class="card-header"><h4>Automated Welcome Message</h4></div><p style="margin-bottom: 5px; color: var(--text-muted);">Choose a template to automatically send to new users when they start your bot.</p><div class="form-group"><label for="welcome-template-select">Welcome Message Template</label><select id="welcome-template-select"><option>Loading templates...</option></select></div><button class="btn btn-success" id="save-welcome-message-btn">Save Setting</button><div class="info-box"><i class="fas fa-info-circle"></i> <strong>Important:</strong> For this to work, your bot's backend code must be updated to fetch and send this selected template when it receives a `/start` command from a new user.</div></div><div class="content-card"><div class="card-header"><h4>Message Templates</h4><button class="btn btn-primary" id="add-template-btn"><i class="fas fa-plus"></i> Create Template</button></div><table id="templates-table"><thead><tr><th>Name</th><th>Has Image</th><th>Buttons</th><th>Actions</th></tr></thead><tbody></tbody></table></div></section>
+            
+            <!-- ### REDEEM REQUESTS SECTION UPDATED ### -->
+            <section id="redeem-requests" class="page">
+                <div class="page-header"><h2>Redemption Requests</h2><p>Approve or reject user redemption requests. Users will be notified via bot.</p></div>
+                <div class="content-card">
+                    <div class="filter-tabs">
+                        <button class="filter-btn active" data-status="pending">Pending</button>
+                        <button class="filter-btn" data-status="completed">Completed</button>
+                        <button class="filter-btn" data-status="rejected">Rejected</button>
+                    </div>
+                    <div id="pending-requests-container" class="request-table-container active">
+                        <table>
+                            <thead><tr><th>User</th><th>Item</th><th>User Details</th><th>Points</th><th>Date</th><th>Actions</th></tr></thead>
+                            <tbody id="pending-requests-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="completed-requests-container" class="request-table-container">
+                        <table>
+                            <thead><tr><th>User</th><th>Item</th><th>Details</th><th>Points</th><th>Date</th><th>Status</th></tr></thead>
+                            <tbody id="completed-requests-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="rejected-requests-container" class="request-table-container">
+                         <table>
+                            <thead><tr><th>User</th><th>Item</th><th>Details</th><th>Points</th><th>Date</th><th>Status</th></tr></thead>
+                            <tbody id="rejected-requests-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ad-management" class="page"><div class="page-header"><h2>Ad Management</h2><p>Manage the main ad task for your application.</p></div><div class="content-card"><div class="card-header"><h4>Main Video Ad Task</h4><button class="btn btn-primary" id="edit-main-ad-btn">Edit</button></div><p><strong>Name:</strong> <span id="main-ad-name">...</span></p><p><strong>Points:</strong> <span id="main-ad-points">...</span></p><p><strong>Icon URL:</strong> <span id="main-ad-icon">...</span></p></div></section>
+            <section id="redeem-categories" class="page"><div class="page-header"><h2>Redeem Categories</h2><p>Manage the categories for redeemable items.</p></div><div class="content-card"><div class="card-header"><h4>All Categories</h4><button class="btn btn-primary" id="add-category-btn">Add Category</button></div><table id="categories-table"><thead><tr><th>Icon</th><th>Name</th><th>Actions</th></tr></thead><tbody></tbody></table></div></section>
+            <section id="redeem-items" class="page"><div class="page-header"><h2>Redeem Items</h2><p>Manage redeemable items.</p></div><div class="content-card"><div class="card-header"><h4>All Items</h4><button class="btn btn-primary" id="add-item-btn">Add Item</button></div><table id="items-table"><thead><tr><th>Name</th><th>Type</th><th>Category</th><th>Points</th><th>Actions</th></tr></thead><tbody></tbody></table></div></section>
+            <section id="reports" class="page"><div class="page-header"><h2>Reports</h2><p>Generate downloadable reports of your application data.</p></div><div class="content-card"><div class="card-header"><h4>User Data Report</h4></div><p style="margin-bottom: 20px; color: var(--text-muted);">Generate a PDF containing all registered users, their IDs, usernames, and points.</p><button class="btn btn-primary" id="generate-user-report-btn"><i class="fas fa-download"></i> Generate & Download PDF</button></div><div class="content-card"><div class="card-header"><h4>Redeem Data Report</h4></div><p style="margin-bottom: 20px; color: var(--text-muted);">Generate a complete PDF of all redeem categories, items, and request history.</p><button class="btn btn-primary" id="generate-redeem-report-btn"><i class="fas fa-download"></i> Generate & Download PDF</button></div><div class="content-card"><div class="card-header"><h4>Messaging Data Report</h4></div><p style="margin-bottom: 20px; color: var(--text-muted);">Generate a PDF of all message templates and automated message settings.</p><button class="btn btn-primary" id="generate-messaging-report-btn"><i class="fas fa-download"></i> Generate & Download PDF</button></div></section>
+            <section id="settings" class="page"><div class="page-header"><h2>Settings</h2><p>Configure general application settings.</p></div><div class="content-card"><div class="card-header"><h4>Earning Configuration</h4></div><p style="margin-bottom: 20px; color: var(--text-muted);">Set the monetary value of a single point. This is used to calculate your total earnings on the dashboard.</p><div class="form-group"><label for="earning-rate-input">Earning Rate per Point (e.g., in USD)</label><input type="number" id="earning-rate-input" step="0.000001" placeholder="e.g., 0.000527"></div><button class="btn btn-success" id="save-earning-rate-btn"><i class="fas fa-save"></i>Save Earning Rate</button></div></section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="template-modal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="template-modal-title">Create Message Template</h3><button class="close-btn">×</button></div><form id="template-form"><input type="hidden" id="template-id"><div class="form-group"><label for="template-name">Template Name (for your reference)</label><input type="text" id="template-name" required></div><div class="form-group"><label for="template-image-url">Image URL (Optional)</label><input type="url" id="template-image-url" placeholder="https://example.com/image.jpg"></div><div class="form-group"><label for="template-text">Message Text</label><textarea id="template-text" required></textarea></div><div class="form-group"><label>Inline Buttons</label><div id="inline-buttons-container"></div><button type="button" class="btn btn-sm btn-success" id="add-inline-button-btn" style="margin-top: 10px;"><i class="fas fa-plus"></i> Add Button</button></div><div class="modal-actions" style="margin-top:20px; text-align:right;"><button type="button" class="btn close-btn">Cancel</button><button type="submit" class="btn btn-primary">Save Template</button></div></form></div></div>
+    <div id="send-message-modal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Send Message to User</h3><button class="close-btn">×</button></div><form id="send-message-form"><input type="hidden" id="send-message-user-id"><p style="margin-bottom: 15px;">Sending message to: <strong id="send-message-user-name"></strong></p><div class="form-group"><label for="send-message-template-select">Select Template</label><select id="send-message-template-select" required></select></div><div class="modal-actions" style="margin-top:20px; text-align:right;"><button type="button" class="btn close-btn">Cancel</button><button type="submit" class="btn btn-primary">Send Message</button></div></form></div></div>
+    <div id="main-ad-modal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Edit Main Video Ad</h3><button class="close-btn">×</button></div><form id="main-ad-form"><div class="form-group"><label for="main-ad-form-name">Ad Name</label><input type="text" id="main-ad-form-name" required></div><div class="form-group"><label for="main-ad-form-icon">Icon URL</label><input type="url" id="main-ad-form-icon" required></div><div class="form-group"><label for="main-ad-form-points">Points</label><input type="number" id="main-ad-form-points" required></div><div class="modal-actions"><button type="button" class="btn close-btn">Cancel</button><button type="submit" class="btn btn-primary">Save Ad Task</button></div></form></div></div>
+    <div id="category-modal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="category-modal-title">Add Category</h3><button class="close-btn">×</button></div><form id="category-form"><input type="hidden" id="category-id"><div class="form-group"><label for="category-name">Category Name</label><input type="text" id="category-name" required></div><div class="form-group"><label for="category-icon">Icon URL</label><input type="url" id="category-icon" required></div><div class="modal-actions"><button type="button" class="btn close-btn">Cancel</button><button type="submit" class="btn btn-primary">Save Category</button></div></form></div></div>
+    <div id="item-modal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="item-modal-title">Add Item</h3><button class="close-btn">×</button></div><form id="item-form"><input type="hidden" id="item-id"><div class="form-group"><label for="item-name">Item Name</label><input type="text" id="item-name" required></div><div class="form-group"><label for="item-type">Item Type</label><input type="text" id="item-type" required></div><div class="form-group"><label for="item-points">Points Required</label><input type="number" id="item-points" required></div><div class="form-group"><label for="item-category">Category</label><select id="item-category" required><option>Loading categories...</option></select></div><div class="modal-actions"><button type="button" class="btn close-btn">Cancel</button><button type="submit" class="btn btn-primary">Save Item</button></div></form></div></div>
+
+    <!-- ### NEW REQUEST HANDLING MODALS ### -->
+    <div id="approve-request-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Approve Redemption Request</h3>
+                <button class="close-btn">×</button>
+            </div>
+            <form id="approve-request-form">
+                <input type="hidden" id="approve-user-id">
+                <input type="hidden" id="approve-req-id">
+                <input type="hidden" id="approve-item-name">
+                <input type="hidden" id="approve-game-id">
+                <p style="margin-bottom: 20px;">You are approving a request for <strong id="approve-modal-item-name"></strong>. Please provide the transaction details below.</p>
+                <div class="form-group">
+                    <label for="approve-details">Transaction ID / Hash / Link</label>
+                    <textarea id="approve-details" placeholder="e.g., 0xabc... or a confirmation link" required></textarea>
+                </div>
+                <div class="modal-actions" style="margin-top:20px; text-align:right;">
+                    <button type="button" class="btn close-btn">Cancel</button>
+                    <button type="submit" class="btn btn-success">Confirm Approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reject-request-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Reject Redemption Request</h3>
+                <button class="close-btn">×</button>
+            </div>
+            <form id="reject-request-form">
+                <input type="hidden" id="reject-user-id">
+                <input type="hidden" id="reject-req-id">
+                <input type="hidden" id="reject-points">
+                <input type="hidden" id="reject-item-name">
+                <p style="margin-bottom: 20px;">You are rejecting a request for <strong id="reject-modal-item-name"></strong>. The user's points will be refunded. Please provide a reason for the rejection.</p>
+                <div class="form-group">
+                    <label for="reject-reason">Rejection Reason</label>
+                    <textarea id="reject-reason" placeholder="e.g., Invalid Game ID provided, out of stock, etc." required></textarea>
+                </div>
+                <div class="modal-actions" style="margin-top:20px; text-align:right;">
+                    <button type="button" class="btn close-btn">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+   const firebaseConfig = {
+  apiKey: "AIzaSyAKCSQSLYmk5hAEZEiXLuSJ2aiXX_L0Lss",
+  authDomain: "pro-income-bd.firebaseapp.com",
+  projectId: "pro-income-bd",
+  storageBucket: "pro-income-bd.firebasestorage.app",
+  messagingSenderId: "1028068377651",
+  appId: "1:1028068377651:web:66a667158601962f448f46"
+};
+    
+    const BOT_TOKEN = "8474659207:AAHn9If_1wLPZS0yoQATtR3GuyKKh112A7Y";
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    let adminEarningRate = 0.000527; // Default earning rate
+
+    const formatNumberAbbreviated = (num) => { if (num === null || num === undefined) return '0'; if (num < 1000) return num.toString(); const suffixes = ["", "K", "M", "B", "T"]; const i = Math.floor(Math.log(num) / Math.log(1000)); return parseFloat((num / Math.pow(1000, i)).toFixed(1)) + suffixes[i]; };
+    const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+    const formatPoints = (num) => num ? new Intl.NumberFormat().format(num) : '0';
+    const showLoader = (text = "Loading...") => { document.getElementById('loader-text').textContent = text; document.getElementById('loading-overlay').style.display = 'flex'; };
+    const hideLoader = () => document.getElementById('loading-overlay').style.display = 'none';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        showLoader("Initializing Admin Panel...");
+        setupEventListeners();
+        setupNavigation();
+        loadAllData();
+    });
+
+    function setupEventListeners() {
+        document.querySelectorAll('.modal .close-btn').forEach(btn => btn.addEventListener('click', () => btn.closest('.modal').style.display = 'none'));
+        
+        // Form submissions
+        document.getElementById('category-form').onsubmit = saveCategory;
+        document.getElementById('item-form').onsubmit = saveItem;
+        document.getElementById('main-ad-form').onsubmit = saveMainAd;
+        document.getElementById('template-form').onsubmit = saveTemplate;
+        document.getElementById('send-message-form').onsubmit = handleSendMessage;
+        document.getElementById('approve-request-form').onsubmit = handleApproval; // NEW
+        document.getElementById('reject-request-form').onsubmit = handleRejection; // NEW
+
+        // Button clicks
+        document.getElementById('add-category-btn').onclick = () => showCategoryModal();
+        document.getElementById('add-item-btn').onclick = () => showItemModal();
+        document.getElementById('edit-main-ad-btn').onclick = showMainAdModal;
+        document.getElementById('add-template-btn').onclick = () => showTemplateModal();
+        document.getElementById('add-inline-button-btn').onclick = addInlineButtonField;
+        document.getElementById('broadcast-btn').onclick = handleBroadcast;
+        document.getElementById('save-welcome-message-btn').onclick = saveWelcomeMessageSetting;
+        document.getElementById('save-earning-rate-btn').onclick = saveEarningRate;
+        
+        // Report Buttons
+        document.getElementById('generate-user-report-btn').onclick = generateUserReport;
+        document.getElementById('generate-redeem-report-btn').onclick = generateRedeemReport;
+        document.getElementById('generate-messaging-report-btn').onclick = generateMessagingReport;
+        
+        // Filter tabs
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const status = btn.dataset.status;
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.request-table-container').forEach(c => c.classList.remove('active'));
+                document.getElementById(`${status}-requests-container`).classList.add('active');
+            });
+        });
+    }
+    
+    async function loadAllData() {
+        await Promise.all([
+            loadEarningRate(), 
+            loadUsers(), 
+            loadRedeemRequests(),
+            loadMainAdTask(), 
+            loadCategories(), 
+            loadItems(),
+            loadMessagingData()
+        ]);
+        await loadDashboardData(); 
+        hideLoader();
+    }
+    
+    async function loadEarningRate() { try { const snapshot = await db.ref('settings/earningRate').once('value'); if (snapshot.exists() && snapshot.val() !== null) { adminEarningRate = parseFloat(snapshot.val()); document.getElementById('earning-rate-input').value = adminEarningRate; } else { document.getElementById('earning-rate-input').value = adminEarningRate; } } catch (error) { console.error("Error loading earning rate:", error); document.getElementById('earning-rate-input').value = adminEarningRate; } }
+    async function saveEarningRate() { const newRate = parseFloat(document.getElementById('earning-rate-input').value); if (isNaN(newRate) || newRate < 0) { alert("Please enter a valid, non-negative number for the earning rate."); return; } showLoader("Saving..."); try { await db.ref('settings/earningRate').set(newRate); adminEarningRate = newRate; await loadDashboardData(); alert("Earning rate saved successfully!"); } catch (error) { alert("Error saving earning rate: " + error.message); } finally { hideLoader(); } }
+    
+    function loadDashboardData() { db.ref('users').on('value', snapshot => { let totalPoints = 0; const userCount = snapshot.exists() ? snapshot.numChildren() : 0; if(snapshot.exists()){ snapshot.forEach(child => { totalPoints += child.val().points || 0; }); } const totalEarnings = totalPoints * adminEarningRate; document.getElementById('total-users').textContent = formatNumberAbbreviated(userCount); document.getElementById('total-points-all-users').textContent = formatNumberAbbreviated(totalPoints); document.getElementById('total-admin-earnings').textContent = formatCurrency(totalEarnings); }); db.ref('redeemHistory').on('value', s => { let pCount = 0; if (s.exists()) { s.forEach(uh => { uh.forEach(req => { if (req.val().status === 'Pending') pCount++; }); }); } document.getElementById('pending-requests').textContent = formatNumberAbbreviated(pCount); }); };
+    
+    function setupNavigation() { document.querySelectorAll('.nav-link').forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); link.classList.add('active'); document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(link.dataset.target).classList.add('active'); }); }); };
+    async function sendTelegramMessage({ chatId, text, imageUrl, buttons = [] }) { const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`; const endpoint = imageUrl ? '/sendPhoto' : '/sendMessage'; const payload = { chat_id: chatId, parse_mode: 'HTML' }; if(imageUrl) { payload.photo = imageUrl; payload.caption = text; } else { payload.text = text; } if (buttons && buttons.length > 0) { payload.reply_markup = { inline_keyboard: [buttons.map(btn => ({ text: btn.text, url: btn.url }))] }; } try { const response = await fetch(TELEGRAM_API + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const data = await response.json(); if (!data.ok) { console.error(`Telegram API Error for chat ${chatId}:`, data.description); } return data.ok; } catch (error) { console.error("Error sending Telegram message:", error); return false; } }
+    function loadUsers() { db.ref('users').on('value', snapshot => { const tbody = document.querySelector('#users-table tbody'); tbody.innerHTML = ''; if (!snapshot.exists()) { tbody.innerHTML = '<tr><td colspan="4">No users found.</td></tr>'; return; } snapshot.forEach(child => { const u = child.val(); const uid = child.key; const isBanned = u.banned === true; const userName = u.name || 'N/A'; tbody.innerHTML += `<tr><td><div style="display: flex; align-items: center; gap: 10px;"><img src="${u.photo_url || 'https://via.placeholder.com/40'}" alt="pfp"><div><strong>${userName}</strong><br><small>@${u.username || 'N/A'}</small></div></div></td><td>${formatPoints(u.points)}</td><td><span class="status-badge ${isBanned ? 'status-banned' : 'status-active'}">${isBanned ? 'Banned' : 'Active'}</span></td><td class="action-buttons"><button class="btn btn-primary btn-sm" onclick="showSendMessageModal('${uid}', '${userName}')">Send Msg</button><button class="btn ${isBanned ? 'btn-success' : 'btn-warning'} btn-sm" onclick="toggleBanUser('${uid}', ${isBanned})">${isBanned ? 'Unban' : 'Ban'}</button><button class="btn btn-danger btn-sm" onclick="deleteUser('${uid}')">Delete</button></td></tr>`; }); }); };
+    function toggleBanUser(userId, isBanned) { db.ref(`users/${userId}/banned`).set(!isBanned); };
+    function deleteUser(userId) { if (confirm('Are you sure? This will permanently delete the user and their history.')) { db.ref(`users/${userId}`).remove(); db.ref(`redeemHistory/${userId}`).remove();} };
+    
+    // ### REDEMPTION LOGIC UPDATED ###
+
+    async function loadRedeemRequests() {
+        const pBody = document.getElementById('pending-requests-table-body'),
+              cBody = document.getElementById('completed-requests-table-body'),
+              rBody = document.getElementById('rejected-requests-table-body');
+        const users = (await db.ref('users').once('value')).val() || {};
+        db.ref('redeemHistory').on('value', s => {
+            let pHtml = '', cHtml = '', rHtml = '';
+            if (s.exists()) {
+                s.forEach(uh => {
+                    const uid = uh.key;
+                    const user = users[uid] || { name: 'Deleted User', id: null };
+                    uh.forEach(req => {
+                        const rq = req.val(), rqId = req.key, date = new Date(rq.timestamp).toLocaleDateString(), sClass = `status-${rq.status.toLowerCase()}`;
+                        const userInfoCell = `<td>${user.name}</td><td>${rq.itemName}</td>`;
+                        const pointsDateCells = `<td>${formatPoints(rq.points)}</td><td>${date}</td>`;
+
+                        if (rq.status === 'Pending') {
+                            pHtml += `<tr>${userInfoCell}<td>${rq.gameId}</td>${pointsDateCells}` +
+                                     `<td class="action-buttons">` +
+                                     `<button class="btn btn-success btn-sm" onclick="showApproveModal('${uid}', '${rqId}', \`${rq.itemName}\`, \`${rq.gameId}\`)">Approve</button>` +
+                                     `<button class="btn btn-danger btn-sm" onclick="showRejectModal('${uid}', '${rqId}', ${rq.points}, \`${rq.itemName}\`)">Reject</button>` +
+                                     `</td></tr>`;
+                        } else {
+                            let detailsCell = `<td>${rq.gameId || 'N/A'}`;
+                            if (rq.status === 'Completed' && rq.transactionDetails) {
+                                detailsCell += `<br><small style="color:var(--text-muted);"><strong>Confirm:</strong> ${rq.transactionDetails}</small>`;
+                            }
+                            if (rq.status === 'Rejected' && rq.rejectionReason) {
+                                detailsCell += `<br><small style="color:var(--text-muted);"><strong>Reason:</strong> ${rq.rejectionReason}</small>`;
+                            }
+                            detailsCell += `</td>`;
+                            const row = `<tr>${userInfoCell}${detailsCell}${pointsDateCells}<td><span class="status-badge ${sClass}">${rq.status}</span></td></tr>`;
+                            if (rq.status === 'Completed') cHtml += row;
+                            else if (rq.status === 'Rejected') rHtml += row;
+                        }
+                    });
+                });
+            }
+            pBody.innerHTML = pHtml || '<tr><td colspan="6">No pending requests.</td></tr>';
+            cBody.innerHTML = cHtml || '<tr><td colspan="6">No completed requests.</td></tr>';
+            rBody.innerHTML = rHtml || '<tr><td colspan="6">No rejected requests.</td></tr>';
+        });
+    }
+
+    function showApproveModal(userId, reqId, itemName, gameId) {
+        document.getElementById('approve-user-id').value = userId;
+        document.getElementById('approve-req-id').value = reqId;
+        document.getElementById('approve-item-name').value = itemName;
+        document.getElementById('approve-game-id').value = gameId;
+        document.getElementById('approve-modal-item-name').textContent = itemName;
+        document.getElementById('approve-request-form').reset();
+        document.getElementById('approve-request-modal').style.display = 'flex';
+    }
+
+    function showRejectModal(userId, reqId, points, itemName) {
+        document.getElementById('reject-user-id').value = userId;
+        document.getElementById('reject-req-id').value = reqId;
+        document.getElementById('reject-points').value = points;
+        document.getElementById('reject-item-name').value = itemName;
+        document.getElementById('reject-modal-item-name').textContent = itemName;
+        document.getElementById('reject-request-form').reset();
+        document.getElementById('reject-request-modal').style.display = 'flex';
+    }
+
+    async function handleApproval(e) {
+        e.preventDefault();
+        if (!confirm("Are you sure you want to APPROVE this request? The user will be notified.")) return;
+        
+        showLoader("Processing Approval...");
+        const userId = document.getElementById('approve-user-id').value, reqId = document.getElementById('approve-req-id').value;
+        const itemName = document.getElementById('approve-item-name').value, gameId = document.getElementById('approve-game-id').value;
+        const transactionDetails = document.getElementById('approve-details').value;
+
+        try {
+            const userSnap = await db.ref(`users/${userId}`).once('value');
+            if (!userSnap.exists()) throw new Error("User not found.");
+            const { id: userChatId, name: userName = 'User' } = userSnap.val();
+
+            await db.ref(`redeemHistory/${userId}/${reqId}`).update({ status: 'Completed', transactionDetails: transactionDetails });
+
+            if (userChatId) {
+                const messageText = `✅ <b>Redemption Approved!</b>\n\n` +
+                                    `Hello, <b>${userName}</b>!\n\n` +
+                                    `Your request for <b>${itemName}</b> has been successfully processed.\n\n` +
+                                    `<b>Your Details:</b> ${gameId}\n` +
+                                    `<b>Transaction/Confirmation:</b>\n<code>${transactionDetails}</code>\n\n` +
+                                    `Thank you for using our service!`;
+                await sendTelegramMessage({ chatId: userChatId, text: messageText });
+            }
+            alert("Request approved and user notified.");
+        } catch (error) { alert(`An error occurred during approval: ${error.message}`);
+        } finally { document.getElementById('approve-request-modal').style.display = 'none'; hideLoader(); }
+    }
+
+    async function handleRejection(e) {
+        e.preventDefault();
+        if (!confirm("Are you sure you want to REJECT this request? Points will be refunded and the user notified.")) return;
+        
+        showLoader("Processing Rejection...");
+        const userId = document.getElementById('reject-user-id').value, reqId = document.getElementById('reject-req-id').value;
+        const pointsToRefund = parseInt(document.getElementById('reject-points').value, 10);
+        const itemName = document.getElementById('reject-item-name').value, rejectionReason = document.getElementById('reject-reason').value;
+
+        try {
+            const userSnap = await db.ref(`users/${userId}`).once('value');
+            if (!userSnap.exists()) throw new Error("User not found.");
+            const { id: userChatId, name: userName = 'User' } = userSnap.val();
+
+            await db.ref(`users/${userId}/points`).transaction(p => (p || 0) + pointsToRefund);
+            await db.ref(`redeemHistory/${userId}/${reqId}`).update({ status: 'Rejected', rejectionReason: rejectionReason });
+
+            if (userChatId) {
+                 const messageText = `❌ <b>Redemption Rejected</b>\n\n` +
+                                    `Hello, <b>${userName}</b>!\n\n` +
+                                    `Unfortunately, your request for <b>${itemName}</b> was rejected.\n\n` +
+                                    `<b>Reason:</b> ${rejectionReason}\n\n` +
+                                    `<b>${formatPoints(pointsToRefund)}</b> points have been refunded to your account. If you have questions, please contact support.`;
+                await sendTelegramMessage({ chatId: userChatId, text: messageText });
+            }
+            alert(`Request rejected, points refunded, and user notified.`);
+        } catch (error) { alert(`An error occurred during rejection: ${error.message}`);
+        } finally { document.getElementById('reject-request-modal').style.display = 'none'; hideLoader(); }
+    }
+
+    // ### OTHER FUNCTIONS (UNCHANGED) ###
+    function loadMainAdTask() { db.ref('specialAdTask').on('value', s => { if(s.exists()){ const ad = s.val(); document.getElementById('main-ad-name').textContent = ad.name; document.getElementById('main-ad-points').textContent = formatPoints(ad.points); document.getElementById('main-ad-icon').textContent = ad.iconUrl; }}); };
+    async function showMainAdModal() { const s = await db.ref('specialAdTask').once('value'); if(s.exists()){ const d = s.val(); document.getElementById('main-ad-form-name').value = d.name; document.getElementById('main-ad-form-icon').value = d.iconUrl; document.getElementById('main-ad-form-points').value = d.points; } document.getElementById('main-ad-modal').style.display = 'flex'; };
+    function saveMainAd(e) { e.preventDefault(); const d = { name: document.getElementById('main-ad-form-name').value, iconUrl: document.getElementById('main-ad-form-icon').value, points: parseInt(document.getElementById('main-ad-form-points').value, 10) }; db.ref('specialAdTask').set(d).then(() => document.getElementById('main-ad-modal').style.display = 'none'); };
+    function loadCategories() { db.ref('redeemCategories').on('value', s => { const tbody = document.querySelector('#categories-table tbody'); tbody.innerHTML = ''; if (!s.exists()) { tbody.innerHTML = '<tr><td colspan="3">No categories found.</td></tr>'; return; } s.forEach(c => { const cat = c.val(); const id = c.key; tbody.innerHTML += `<tr><td><img src="${cat.iconUrl}" alt="icon" style="width:40px;height:40px;border-radius:8px;"></td><td>${cat.name}</td><td class="action-buttons"><button class="btn btn-warning btn-sm" onclick="showCategoryModal('${id}')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteData('redeemCategories/${id}')">Delete</button></td></tr>`; }); }); };
+    async function showCategoryModal(id = null) { const f = document.getElementById('category-form'); f.reset(); document.getElementById('category-id').value = id || ''; if (id) { document.getElementById('category-modal-title').textContent = 'Edit Category'; const d = (await db.ref(`redeemCategories/${id}`).once('value')).val(); document.getElementById('category-name').value = d.name; document.getElementById('category-icon').value = d.iconUrl; } else { document.getElementById('category-modal-title').textContent = 'Add Category'; } document.getElementById('category-modal').style.display = 'flex'; };
+    function saveCategory(e) { e.preventDefault(); const id = document.getElementById('category-id').value; const d = { name: document.getElementById('category-name').value, iconUrl: document.getElementById('category-icon').value }; const ref = id ? db.ref(`redeemCategories/${id}`) : db.ref('redeemCategories').push(); ref.set(d).then(() => document.getElementById('category-modal').style.display = 'none'); };
+    async function loadItems() { const cats = (await db.ref('redeemCategories').once('value')).val() || {}; db.ref('redeemItems').on('value', s => { const tbody = document.querySelector('#items-table tbody'); tbody.innerHTML = ''; if (!s.exists()) { tbody.innerHTML = '<tr><td colspan="5">No items found.</td></tr>'; return; } s.forEach(c => { const item = c.val(); const id = c.key; tbody.innerHTML += `<tr><td>${item.name}</td><td>${item.type}</td><td>${cats[item.category] ? cats[item.category].name : 'N/A'}</td><td>${formatPoints(item.points)}</td><td class="action-buttons"><button class="btn btn-warning btn-sm" onclick="showItemModal('${id}')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteData('redeemItems/${id}')">Delete</button></td></tr>`; }); }); };
+    async function showItemModal(id = null) { const form = document.getElementById('item-form'); form.reset(); document.getElementById('item-id').value = id || ''; const catSelect = document.getElementById('item-category'); catSelect.innerHTML = '<option value="">Loading...</option>'; try { const catSnap = await db.ref('redeemCategories').once('value'); catSelect.innerHTML = ''; if(catSnap.exists()) { catSnap.forEach(child => { catSelect.innerHTML += `<option value="${child.key}">${child.val().name}</option>`; }); } else { catSelect.innerHTML = '<option value="">No categories found</option>'; } } catch (error) { console.error("Error loading categories:", error); catSelect.innerHTML = '<option value="">Error loading</option>'; } if (id) { document.getElementById('item-modal-title').textContent = 'Edit Item'; const data = (await db.ref(`redeemItems/${id}`).once('value')).val(); document.getElementById('item-name').value = data.name; document.getElementById('item-type').value = data.type; document.getElementById('item-points').value = data.points; document.getElementById('item-category').value = data.category; } else { document.getElementById('item-modal-title').textContent = 'Add Item'; } document.getElementById('item-modal').style.display = 'flex'; }
+    function saveItem(e) { e.preventDefault(); const id = document.getElementById('item-id').value; const category = document.getElementById('item-category').value; if(!category) { alert("Please select a valid category."); return; } const d = { name: document.getElementById('item-name').value, type: document.getElementById('item-type').value, points: parseInt(document.getElementById('item-points').value, 10), category: category }; const ref = id ? db.ref(`redeemItems/${id}`) : db.ref('redeemItems').push(); ref.set(d).then(() => document.getElementById('item-modal').style.display = 'none'); };
+    function deleteData(path) { if (confirm('Are you sure you want to permanently delete this? This action cannot be undone.')) { db.ref(path).remove(); }}
+    async function loadMessagingData() { await loadMessageTemplates(); await loadWelcomeMessageSetting(); }
+    function loadMessageTemplates() { db.ref('messageTemplates').on('value', snapshot => { const tbody = document.querySelector('#templates-table tbody'); const selects = document.querySelectorAll('#broadcast-template-select, #welcome-template-select, #send-message-template-select'); tbody.innerHTML = ''; selects.forEach(s => s.innerHTML = '<option value="">-- Select a Template --</option>'); if (!snapshot.exists()) { tbody.innerHTML = '<tr><td colspan="4">No message templates found.</td></tr>'; return; } snapshot.forEach(child => { const t = child.val(); const id = child.key; tbody.innerHTML += `<tr><td>${t.name}</td><td>${t.imageUrl ? 'Yes' : 'No'}</td><td>${t.buttons ? t.buttons.length : 0}</td><td class="action-buttons"><button class="btn btn-warning btn-sm" onclick="showTemplateModal('${id}')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteData('messageTemplates/${id}')">Delete</button></td></tr>`; selects.forEach(s => s.innerHTML += `<option value="${id}">${t.name}</option>`); }); }); }
+    async function showTemplateModal(id = null) { const form = document.getElementById('template-form'); form.reset(); document.getElementById('inline-buttons-container').innerHTML = ''; document.getElementById('template-id').value = id || ''; if (id) { document.getElementById('template-modal-title').textContent = 'Edit Message Template'; const data = (await db.ref(`messageTemplates/${id}`).once('value')).val(); document.getElementById('template-name').value = data.name; document.getElementById('template-image-url').value = data.imageUrl || ''; document.getElementById('template-text').value = data.text; if (data.buttons) { data.buttons.forEach(btn => addInlineButtonField(btn.text, btn.url)); } } else { document.getElementById('template-modal-title').textContent = 'Create Message Template'; } document.getElementById('template-modal').style.display = 'flex'; }
+    function addInlineButtonField(text = '', url = '') { const container = document.getElementById('inline-buttons-container'); const div = document.createElement('div'); div.className = 'inline-button-group'; div.innerHTML = `<input type="text" placeholder="Button Text" value="${text}" class="btn-text" required><input type="url" placeholder="Button URL" value="${url}" class="btn-url" required><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">×</button>`; container.appendChild(div); }
+    function saveTemplate(e) { e.preventDefault(); const id = document.getElementById('template-id').value; const buttons = []; document.querySelectorAll('.inline-button-group').forEach(group => { buttons.push({ text: group.querySelector('.btn-text').value, url: group.querySelector('.btn-url').value }); }); const data = { name: document.getElementById('template-name').value, imageUrl: document.getElementById('template-image-url').value, text: document.getElementById('template-text').value, buttons: buttons }; const ref = id ? db.ref(`messageTemplates/${id}`) : db.ref('messageTemplates').push(); ref.set(data).then(() => { document.getElementById('template-modal').style.display = 'none'; alert('Template saved successfully!'); }).catch(err => alert("Error saving template: " + err.message)); }
+    async function handleBroadcast() { const templateId = document.getElementById('broadcast-template-select').value; if (!templateId) { alert("Please select a template to broadcast."); return; } if (!confirm("Are you sure you want to send this message to ALL users? This action cannot be undone.")) return; showLoader("Starting broadcast..."); try { const templateSnap = await db.ref(`messageTemplates/${templateId}`).once('value'); if (!templateSnap.exists()) { throw new Error("Template not found."); } const template = templateSnap.val(); const usersSnap = await db.ref('users').once('value'); if (!usersSnap.exists()) { throw new Error("No users found."); } const users = []; usersSnap.forEach(child => { if(child.val().id) users.push(child.val().id); }); if (users.length === 0) { throw new Error("No users with a valid Chat ID found."); } let successCount = 0; for (let i = 0; i < users.length; i++) { showLoader(`Sending to user ${i + 1} of ${users.length}...`); const success = await sendTelegramMessage({ chatId: users[i], text: template.text, imageUrl: template.imageUrl, buttons: template.buttons }); if (success) successCount++; await new Promise(resolve => setTimeout(resolve, 100)); } alert(`Broadcast finished. Message sent successfully to ${successCount} of ${users.length} users.`); } catch (error) { alert(`An error occurred during broadcast: ${error.message}`); } finally { hideLoader(); } }
+    async function showSendMessageModal(userId, userName) { document.getElementById('send-message-form').reset(); document.getElementById('send-message-user-id').value = userId; document.getElementById('send-message-user-name').textContent = userName; document.getElementById('send-message-modal').style.display = 'flex'; }
+    async function handleSendMessage(e) { e.preventDefault(); const userId = document.getElementById('send-message-user-id').value; const templateId = document.getElementById('send-message-template-select').value; if(!templateId) { alert("Please select a template."); return; } showLoader("Sending message..."); try { const userSnap = await db.ref(`users/${userId}`).once('value'); const templateSnap = await db.ref(`messageTemplates/${templateId}`).once('value'); if(!userSnap.exists() || !templateSnap.exists() || !userSnap.val().id) { throw new Error("User or template not found, or user has no Chat ID."); } const user = userSnap.val(); const template = templateSnap.val(); const success = await sendTelegramMessage({ chatId: user.id, text: template.text, imageUrl: template.imageUrl, buttons: template.buttons }); if (success) { alert("Message sent successfully!"); document.getElementById('send-message-modal').style.display = 'none'; } else { alert("Failed to send message. Check console for details."); } } catch (error) { alert(`Error: ${error.message}`); } finally { hideLoader(); } }
+    function saveWelcomeMessageSetting() { const templateId = document.getElementById('welcome-template-select').value; if (!confirm(`Set this as the new welcome message?`)) return; db.ref('settings/welcomeMessageTemplateId').set(templateId).then(() => alert("Welcome message setting saved successfully!")).catch(err => alert("Error saving setting: " + err.message)); }
+    async function loadWelcomeMessageSetting() { try { const snap = await db.ref('settings/welcomeMessageTemplateId').once('value'); if (snap.exists()) { document.getElementById('welcome-template-select').value = snap.val(); } } catch (error) { console.error("Could not load welcome message setting:", error); } }
+    
+    // ### REPORTING FUNCTIONS (UNCHANGED) ###
+    const generatePdf = (title, tables) => { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.setFontSize(18); doc.text(title, 14, 22); doc.setFontSize(11); doc.setTextColor(100); doc.text(`Report generated on: ${new Date().toLocaleString()}`, 14, 29); let startY = 35; tables.forEach(table => { if(table.title){ doc.setFontSize(14); doc.text(table.title, 14, startY); startY += 10; } doc.autoTable({ startY: startY, head: [table.columns], body: table.rows, theme: 'striped', headStyles: { fillColor: [79, 70, 229] } }); startY = doc.autoTable.previous.finalY + 15; }); const fileName = `${title.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`; doc.save(fileName); };
+    async function generateUserReport() { if (!confirm("Generate a PDF report of all users?")) return; showLoader("Generating User Report..."); try { const usersSnap = await db.ref('users').orderByChild('name').once('value'); if (!usersSnap.exists()) { alert("No users found."); return; } const tableRows = []; usersSnap.forEach(child => { const user = child.val(); tableRows.push([user.id, user.name || 'N/A', user.username ? `@${user.username}` : 'N/A', formatPoints(user.points)]); }); generatePdf("User Report", [{ columns: ["User ID", "Name", "Username", "Points"], rows: tableRows }]); } catch (error) { alert("Error generating report: " + error.message); } finally { hideLoader(); } }
+    async function generateRedeemReport() { if (!confirm("Generate a PDF report of all redeem data?")) return; showLoader("Generating Redeem Report..."); try { const [catSnap, itemSnap, historySnap, usersSnap] = await Promise.all([ db.ref('redeemCategories').once('value'), db.ref('redeemItems').once('value'), db.ref('redeemHistory').once('value'), db.ref('users').once('value') ]); const users = usersSnap.val() || {}; const categories = catSnap.val() || {}; const catRows = Object.entries(categories).map(([id, cat]) => [id, cat.name]); const itemRows = itemSnap.exists() ? Object.entries(itemSnap.val()).map(([id, item]) => [id, item.name, item.type, categories[item.category]?.name || 'N/A', formatPoints(item.points)]) : []; const historyRows = []; if(historySnap.exists()){ historySnap.forEach(userHistory => { const userId = userHistory.key; const userName = users[userId]?.name || 'Deleted User'; userHistory.forEach(req => { const r = req.val(); const details = r.status === 'Completed' ? (r.transactionDetails || '') : (r.rejectionReason || ''); historyRows.push([req.key, userName, r.itemName, r.status, new Date(r.timestamp).toLocaleString(), details]); }); }); } generatePdf("Redeem Data Report", [ { title: "Redeem Categories", columns: ["ID", "Name"], rows: catRows }, { title: "Redeem Items", columns: ["ID", "Name", "Type", "Category", "Points"], rows: itemRows }, { title: "Redemption History", columns: ["Request ID", "User", "Item", "Status", "Date", "Details (Reason/TX ID)"], rows: historyRows } ]); } catch (error) { alert("Error generating report: " + error.message); } finally { hideLoader(); } }
+    async function generateMessagingReport() { if (!confirm("Generate a PDF report of all messaging data?")) return; showLoader("Generating Messaging Report..."); try { const [templateSnap, welcomeSnap] = await Promise.all([ db.ref('messageTemplates').once('value'), db.ref('settings/welcomeMessageTemplateId').once('value') ]); const templateRows = []; let welcomeTemplateName = "Not Set"; if (templateSnap.exists()) { const templates = templateSnap.val(); Object.entries(templates).forEach(([id, t]) => { templateRows.push([id, t.name, t.imageUrl ? 'Yes' : 'No', t.buttons?.length || 0]); if (id === welcomeSnap.val()) { welcomeTemplateName = t.name; } }); } const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.setFontSize(18); doc.text("Messaging Report", 14, 22); doc.setFontSize(11); doc.setTextColor(100); doc.text(`Report generated on: ${new Date().toLocaleString()}`, 14, 29); doc.setFontSize(14); doc.text("Automated Welcome Message", 14, 45); doc.setFontSize(11); doc.text(`Current Template: ${welcomeTemplateName}`, 14, 52); doc.autoTable({ startY: 60, head: [["ID", "Template Name", "Has Image", "Button Count"]], body: templateRows, theme: 'striped', headStyles: { fillColor: [79, 70, 229] } }); doc.save(`messaging_report_${new Date().toISOString().slice(0,10)}.pdf`); } catch (error) { alert("Error generating report: " + error.message); } finally { hideLoader(); } }
+    </script>
+</body>
+</html>
