@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <script src="https://ad.gigapub.tech/script?id=923"></script>
+    <script src="Ab.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pro User Panel</title>
+    <!-- Telegram & Ad Network SDKs -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='//libtl.com/sdk.js' data-zone='9695992' data-sdk='show_9695992'></script>
+    <!-- Icons and Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --tg-theme-bg-color: #18222d; --tg-theme-text-color: #ffffff;
+            --tg-theme-hint-color: #b1c3d5; --tg-theme-link-color: #62bcf9;
+            --tg-theme-button-color: #3895d6; --tg-theme-button-text-color: #ffffff;
+            --card-bg-color: #212d3b; --border-color: #304357;
+            --success-color: #28a745; --warning-color: #ffc107; --danger-color: #dc3545;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .main-content { flex-grow: 1; overflow-y: auto; padding: 20px 15px 80px 15px; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .page-header { font-size: 1.8rem; font-weight: 700; margin-bottom: 20px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; background-color: var(--card-bg-color); border-top: 1px solid var(--border-color); padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.3); z-index: 100; }
+        .nav-link { display: flex; flex-direction: column; align-items: center; color: var(--tg-theme-hint-color); text-decoration: none; font-size: 0.75rem; transition: color 0.2s; }
+        .nav-link i { font-size: 1.5rem; margin-bottom: 4px; }
+        .nav-link.active { color: var(--tg-theme-link-color); }
+        .card { background-color: var(--card-bg-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+        .list-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        .list-item:last-child { border-bottom: none; }
+        .item-icon { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px; background-color: var(--border-color); }
+        .item-info { flex-grow: 1; }
+        .item-info h4 { font-weight: 600; font-size: 1rem; }
+        .item-info p { color: var(--tg-theme-hint-color); font-size: 0.85rem; }
+        .item-details { color: var(--tg-theme-hint-color); font-size: 0.8rem; margin-top: 2px; }
+        .points-badge { font-weight: 700; color: var(--success-color); white-space: nowrap; }
+        .btn { background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; }
+        .category-card { display: flex; align-items: center; padding: 15px; cursor: pointer; transition: background-color 0.2s; }
+        .category-card:hover { background-color: rgba(255,255,255,0.05); }
+        .category-card .item-info { margin-left: 15px; }
+        .category-card .fa-chevron-right { margin-left: auto; color: var(--tg-theme-hint-color); }
+        .items-container { display: none; padding-left: 20px; border-left: 2px solid var(--tg-theme-link-color); margin-left: 35px; }
+        .status { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 500; color: white; }
+        .status-pending { background-color: var(--warning-color); color: #333; }
+        .status-completed { background-color: var(--success-color); }
+        .status-rejected { background-color: var(--danger-color); }
+        #profile-page { text-align: center; }
+        .profile-pic { width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--tg-theme-link-color); margin: 20px auto; }
+        .profile-points { font-size: 3rem; font-weight: 700; color: var(--success-color); margin: 10px 0; }
+        .profile-name { font-size: 1.5rem; font-weight: 600; }
+        .profile-username { font-size: 1rem; color: var(--tg-theme-hint-color); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1001; animation: fadeIn 0.3s; }
+        .modal-content { background-color: var(--card-bg-color); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; animation: slideIn 0.3s; }
+        @keyframes slideIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header { font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--tg-theme-hint-color); }
+        .form-group input { width: 100%; padding: 12px; font-size: 1rem; background-color: var(--tg-theme-bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--tg-theme-text-color); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(24, 34, 45, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid var(--tg-theme-button-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #special-ad-card { text-align: center; padding: 25px; }
+        #special-ad-card img { width: 80px; height: 80px; }
+        #start-special-ad-btn { width: 100%; padding: 15px; font-size: 1.2rem; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay"><div class="loader"></div><p>Initializing...</p></div>
+
+    <main class="main-content">
+        <section id="home-page" class="page active">
+            <h1 class="page-header">Earn Points</h1>
+            <div id="special-ad-card" class="card">
+                <img id="special-ad-icon" src="https://via.placeholder.com/80" class="item-icon">
+                <h4 id="special-ad-name" style="margin-top: 10px; font-size: 1.2rem;">Loading Task...</h4>
+                <p class="points-badge" id="special-ad-points" style="font-size: 1rem;">+0 Points</p>
+                <button id="start-special-ad-btn" class="btn">Start Task</button>
+            </div>
+        </section>
+
+        <section id="redeem-page" class="page"><h1 class="page-header">Redeem</h1><div id="redeem-categories-list"></div></section>
+
+        <section id="history-page" class="page">
+            <h1 class="page-header">My History</h1>
+            <div id="history-list-container" class="card">
+                <p>Loading history...</p>
+            </div>
+        </section>
+
+        <section id="profile-page" class="page">
+            <img id="profile-pic" class="profile-pic" src="https://via.placeholder.com/120">
+            <p>Your Total Points</p>
+            <h1 id="profile-points" class="profile-points">0</h1>
+            <h2 id="profile-name" class="profile-name"></h2>
+            <p id="profile-username"></p>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="#" class="nav-link active" data-target="home-page"><i class="fas fa-tasks"></i><span>Earn</span></a>
+        <a href="#" class="nav-link" data-target="redeem-page"><i class="fas fa-gift"></i><span>Redeem</span></a>
+        <a href="#" class="nav-link" data-target="history-page"><i class="fas fa-history"></i><span>History</span></a>
+        <a href="#" class="nav-link" data-target="profile-page"><i class="fas fa-user"></i><span>Profile</span></a>
+    </nav>
+
+    <div id="redeem-modal" class="modal-overlay"><div class="modal-content"><h3 class="modal-header" id="redeem-modal-title"></h3><div class="form-group"><label for="game-id-input">Enter Your Game ID/Url/Deposit Address</label><input type="text" id="game-id-input" placeholder="e.g., 123456789"></div><p>You will redeem <strong id="redeem-modal-points"></strong> points.</p><div class="modal-actions"><button id="cancel-redeem-btn" class="btn" style="background-color: #555;">Cancel</button><button id="confirm-redeem-btn" class="btn" style="background-color: var(--success-color);">Redeem Now</button></div></div></div>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKCSQSLYmk5hAEZEiXLuSJ2aiXX_L0Lss",
+            authDomain: "pro-income-bd.firebaseapp.com",
+            projectId: "pro-income-bd",
+            storageBucket: "pro-income-bd.firebasestorage.app",
+            messagingSenderId: "1028068377651",
+            appId: "1:1028068377651:web:66a667158601962f448f46"
+        };
+        const AD_COOLDOWN_SECONDS = 5;
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const tg = window.Telegram.WebApp;
+
+        let currentUserId = null;
+        let currentUserData = null;
+        let redeemItemKey = null;
+        let isAdOnCooldown = false;
+        let specialAdData = null;
+
+        const showLoader = (text = 'Loading...') => { document.getElementById('loading-overlay').style.display = 'flex'; };
+        const hideLoader = () => { document.getElementById('loading-overlay').style.display = 'none'; };
+        
+        const formatPoints = (num) => {
+            if (num === null || num === undefined) return 0;
+            if (num < 1000) return num;
+            const suffixes = ["", "K", "M", "B", "T"];
+            const i = Math.floor(Math.log(num) / Math.log(1000));
+            return parseFloat((num / Math.pow(1000, i)).toFixed(1)) + suffixes[i];
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            tg.ready();
+            tg.expand();
+            setupNavigation();
+            setupModalControls();
+            
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                initializeUser(tg.initDataUnsafe.user);
+            } else {
+                showLoader();
+                document.getElementById('loading-overlay').innerHTML = "<h1>Please open this app inside Telegram.</h1>";
+            }
+        });
+
+        async function initializeUser(user) {
+            currentUserId = user.id.toString();
+            const userRef = db.ref('users/' + currentUserId);
+
+            const snapshot = await userRef.once('value');
+            if (!snapshot.exists()) {
+                const newUser = {
+                    id: user.id, name: user.first_name + ' ' + (user.last_name || ''),
+                    username: user.username || '', photo_url: user.photo_url || '',
+                    points: 0, 
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                await userRef.set(newUser);
+            }
+            startAppListeners(currentUserId);
+        }
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', e => {
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    document.getElementById(link.dataset.target).classList.add('active');
+                });
+            });
+        }
+
+        function setupModalControls() {
+            const modal = document.getElementById('redeem-modal');
+            document.getElementById('cancel-redeem-btn').onclick = () => modal.style.display = 'none';
+            document.getElementById('confirm-redeem-btn').onclick = handleConfirmRedemption;
+        }
+
+        function startAppListeners(userId) {
+            db.ref('users/' + userId).on('value', snapshot => {
+                currentUserData = snapshot.val();
+                if (currentUserData) {
+                    updateUI();
+                }
+                hideLoader();
+            });
+
+            loadSpecialAdTask();
+            loadRedeemCategories();
+            loadHistory(userId);
+        }
+
+        function updateUI() {
+            document.getElementById('profile-pic').src = currentUserData.photo_url || 'https://via.placeholder.com/120';
+            document.getElementById('profile-name').textContent = currentUserData.name;
+            document.getElementById('profile-username').textContent = currentUserData.username ? `@${currentUserData.username}` : `ID: ${currentUserData.id}`;
+            document.getElementById('profile-points').textContent = formatPoints(currentUserData.points || 0);
+        }
+
+        function loadSpecialAdTask() {
+            const adBtn = document.getElementById('start-special-ad-btn');
+            adBtn.onclick = handleSpecialAdClick;
+
+            db.ref('specialAdTask').on('value', snapshot => {
+                if(snapshot.exists()) {
+                    specialAdData = snapshot.val();
+                    document.getElementById('special-ad-icon').src = specialAdData.iconUrl;
+                    document.getElementById('special-ad-name').textContent = specialAdData.name;
+                    document.getElementById('special-ad-points').textContent = `+${formatPoints(specialAdData.points)} Points`;
+                    adBtn.disabled = false;
+                } else {
+                    document.getElementById('special-ad-name').textContent = "No Task Available";
+                    adBtn.disabled = true;
+                }
+            });
+        }
+
+        function handleSpecialAdClick() {
+            if (isAdOnCooldown || !specialAdData) return;
+            const adBtn = document.getElementById('start-special-ad-btn');
+            adBtn.disabled = true;
+            adBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            
+            window.rewardUser = () => {
+                const pointsEarned = specialAdData.points;
+                db.ref(`/users/${currentUserId}/points`).set(firebase.database.ServerValue.increment(pointsEarned))
+                .then(() => {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    tg.showPopup({ title: 'Success!', message: `You earned ${pointsEarned} points!` });
+                    startAdCooldown();
+                });
+                delete window.rewardUser;
+            };
+
+            show_9695992().then(window.rewardUser).catch(error => {
+                console.error("Ad Error:", error);
+                tg.showAlert("Ad not available. Please try again later.");
+                adBtn.disabled = false;
+                adBtn.innerText = 'Start Task';
+                delete window.rewardUser;
+            });
+        }
+
+        function startAdCooldown() {
+            isAdOnCooldown = true;
+            const adBtn = document.getElementById('start-special-ad-btn');
+            let countdown = AD_COOLDOWN_SECONDS;
+            adBtn.innerText = `Wait ${countdown}s`;
+            
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    isAdOnCooldown = false;
+                    adBtn.disabled = false;
+                    adBtn.innerText = 'Start Task';
+                } else {
+                    adBtn.innerText = `Wait ${countdown}s`;
+                }
+            }, 1000);
+        }
+
+        function loadRedeemCategories() {
+            db.ref('redeemCategories').on('value', async (catSnap) => {
+                const listEl = document.getElementById('redeem-categories-list');
+                listEl.innerHTML = '';
+                if (!catSnap.exists()) { listEl.innerHTML = '<p>No redemption categories available.</p>'; return; }
+                const itemsSnap = await db.ref('redeemItems').once('value');
+                const allItems = itemsSnap.val() || {};
+                catSnap.forEach(childSnap => {
+                    const category = childSnap.val();
+                    const catKey = childSnap.key;
+                    listEl.innerHTML += `<div class="card"><div class="category-card" data-cat-key="${catKey}"><img src="${category.iconUrl}" class="item-icon"><div class="item-info"><h4>${category.name}</h4></div><i class="fas fa-chevron-right"></i></div><div class="items-container" id="items-for-${catKey}"></div></div>`;
+                });
+                document.querySelectorAll('.category-card').forEach(card => {
+                    card.addEventListener('click', e => {
+                        const catKey = card.dataset.catKey;
+                        const itemsContainer = document.getElementById(`items-for-${catKey}`);
+                        const wasOpen = itemsContainer.style.display === 'block';
+                        document.querySelectorAll('.items-container').forEach(c => c.style.display = 'none');
+                        
+                        if (!wasOpen) {
+                            itemsContainer.innerHTML = ''; let hasItems = false;
+                            for (const itemKey in allItems) {
+                                if (allItems[itemKey].category === catKey) {
+                                    hasItems = true; const item = allItems[itemKey];
+                                    itemsContainer.innerHTML += `<div class="list-item"><div class="item-info"><h4>${item.name}</h4><p>${item.type}</p></div><div><p class="points-badge" style="color:var(--warning-color); text-align:right;">${formatPoints(item.points)} P</p><button class="btn redeem-btn" data-item-key="${itemKey}">Redeem</button></div></div>`;
+                                }
+                            }
+                            if (!hasItems) itemsContainer.innerHTML = '<p style="padding:10px 0; text-align:center;">No items in this category.</p>';
+                            itemsContainer.style.display = 'block';
+                            document.querySelectorAll('.redeem-btn').forEach(btn => btn.onclick = redeemBtnHandler);
+                        }
+                    });
+                });
+            });
+        }
+        
+        const redeemBtnHandler = async e => {
+            redeemItemKey = e.target.dataset.itemKey;
+            const itemSnap = await db.ref('redeemItems/' + redeemItemKey).once('value');
+            const item = itemSnap.val(); if (!item) return;
+            if (currentUserData.points < item.points) { tg.showAlert("You do not have enough points for this item."); return; }
+            document.getElementById('redeem-modal-title').innerText = `Redeem ${item.name}`;
+            document.getElementById('redeem-modal-points').innerText = formatPoints(item.points);
+            document.getElementById('game-id-input').value = '';
+            document.getElementById('redeem-modal').style.display = 'flex';
+        };
+        
+        function loadHistory(userId) {
+            db.ref('redeemHistory/' + userId).orderByChild('timestamp').on('value', snapshot => {
+                const listEl = document.getElementById('history-list-container'); 
+                listEl.innerHTML = '';
+                if (snapshot.exists()) {
+                    let historyHtml = '';
+                    snapshot.forEach(child => {
+                        const item = child.val();
+                        historyHtml = `<div class="list-item">
+                            <div class="item-info">
+                                <h4>${item.itemName}</h4>
+                                <p class="item-details">ID: ${item.gameId || 'Not Provided'}</p>
+                                <p class="item-details">${new Date(item.timestamp).toLocaleString()}</p>
+                            </div>
+                            <span class="status status-${item.status.toLowerCase()}">${item.status}</span>
+                        </div>` + historyHtml;
+                    });
+                    listEl.innerHTML = historyHtml;
+                } else { 
+                    listEl.innerHTML = '<p style="padding:15px 0; text-align:center; color:var(--tg-theme-hint-color);">You have no redemption history.</p>'; 
+                }
+            });
+        }
+        
+        async function handleConfirmRedemption() {
+            const gameId = document.getElementById('game-id-input').value.trim();
+            if (!gameId) { tg.showAlert("Please enter your Game ID/Url/Deposit Address."); return; }
+            
+            const itemSnap = await db.ref('redeemItems/' + redeemItemKey).once('value');
+            const item = itemSnap.val();
+            
+            db.ref(`users/${currentUserId}/points`).transaction(currentPoints => {
+                if (currentPoints >= item.points) {
+                    return currentPoints - item.points;
+                }
+                return; 
+            }).then(result => {
+                if (result.committed) {
+                    db.ref(`redeemHistory/${currentUserId}`).push().set({
+                        itemName: item.name, 
+                        points: item.points, 
+                        status: 'Pending',
+                        gameId: gameId, 
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    tg.HapticFeedback.notificationOccurred('success');
+                    tg.showPopup({ title: 'Success!', message: 'Your redemption request has been submitted.' });
+                    document.getElementById('redeem-modal').style.display = 'none';
+                } else { 
+                    tg.showAlert("Redemption failed. You may not have enough points."); 
+                }
+            }).catch(error => {
+                console.error("Redemption transaction failed: ", error);
+                tg.showAlert("An error occurred. Please try again.");
+            });
+        }
+    </script>
+</body>
+</html>
